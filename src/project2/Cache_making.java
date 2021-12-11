@@ -4,17 +4,16 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
 public class Cache_making {
     //Cache memory 만들어놓기
-//    CacheSet2_3 cacheSet2_3 = new CacheSet2_3();
     static CacheSet2_3[] L3 = new CacheSet2_3[64];
     static CacheSet2_3[] L2 = new CacheSet2_3[4];
     static CacheSet1[] L1 = new CacheSet1[1];
+
 
     public static void main(String[] args) throws IOException {
         Scanner scanner = new Scanner(System.in);
@@ -27,7 +26,6 @@ public class Cache_making {
             String str = null;
             while ((str = inputFile.readLine()) != null) {
                 memArr[inputMem] = str;
-//                System.out.println(memArr[inputMem]);
                 inputMem++;
             }
         } catch (FileNotFoundException e) {
@@ -35,7 +33,7 @@ public class Cache_making {
         } catch (IndexOutOfBoundsException e){
             System.out.println("Memory is full!");
         }
-        Arrays.sort(memArr);
+//        Arrays.sort(memArr);
 
         //각 cache layer마다 cacheSet 생성자 만들어주기
         L1[0] = new CacheSet1();
@@ -48,15 +46,22 @@ public class Cache_making {
 
         //memory에서 읽을 input값 가져오기
         int count = 0;
-        int hitCount = 0;
+        int L1HitCount = 0;
+        int L2HitCount = 0;
+        int L3HitCount = 0;
+        int memoryRejectCount = 0;
         System.out.println("initial cache memory");
         viewCache(memArr);
         while (true) {
+            count++;
             System.out.print("Input your word that you want to find in memory : ");
             String findWord = scanner.next();
             if (findWord.equals("exit")){
                 break;
             }
+//            if (count>1000) {
+//                break;
+//            }
             else {
                 //찾으려는 word가 memory에서 몇 번째 index인지 (주소값찾기)
                 int memIndex = 0;
@@ -71,69 +76,60 @@ public class Cache_making {
                     }
                 }
                 if (!boundCheck) {
+                    memoryRejectCount++;
                     System.out.println("No data in memory. Please input again.");
                     continue;
                 }
+
+//                //랜덤하게 input넣기
+//                memIndex = (int)(Math.random()*256);
+
                 //index를 나눠서 tag랑 set으로 나눠보기
                 String tenToBin = Integer.toBinaryString(memIndex);
                 while (tenToBin.length() < 12) tenToBin = "0" + tenToBin;
 
-                // L1에서 데이터를 찾기
+                // 2진수 위치에 따라 나누기
                 int tagOfL1 = Integer.parseInt(tenToBin.substring(0,11),2);
                 int tagOfL2 = Integer.parseInt(tenToBin.substring(0,9),2);
                 int setOfL2 = Integer.parseInt(tenToBin.substring(9,11),2);
                 int tagOfL3 = Integer.parseInt(tenToBin.substring(0,5),2);
                 int setOfL3 = Integer.parseInt(tenToBin.substring(5,11),2);
 
-//                if (testCache1(tagOfL1)){
-//                    //L1에서 hit -> 3개 층 모두 업데이트
-//                    new CacheSet1(tagOfL1, count, L1[0]);
-//                    new CacheSet2_3(tagOfL2, count, L2[setOfL2]);
-//                    new CacheSet2_3(tagOfL3, count, L3[setOfL3]);
+//                if (testCache1(tagOfL1, L1[0])) {
+//                    L1HitCount++;
 //                }
-//                else {
-//                    //L1에서 miss
-//
+//                if (testCache2_3(tagOfL2, L2[setOfL2])) {
+//                    L2HitCount++;
+//                }
+//                if (testCache2_3(tagOfL3, L3[setOfL3])) {
+//                    L3HitCount++;
 //                }
 
-//                L1[0] = new CacheSet1();
-//                for (int i=0; i<4; i++) {
-//                    L2[i] = new CacheSet2_3();
-//                }
-//                for (int i=0; i<64; i++) {
-//                    L3[i] = new CacheSet2_3();
-//                }
                 change1(tagOfL1, count, L1[0]);
                 change2_3(tagOfL2, count, L2[setOfL2]);
                 change2_3(tagOfL3, count, L3[setOfL3]);
-//                CacheSet1 cacheSet1 = new CacheSet1(tagOfL1, count, L1[0]);
-//                new CacheSet2_3(tagOfL2, count, L2[setOfL2]);
-//                new CacheSet2_3(tagOfL3, count, L3[setOfL3]);
-//                CacheSet2_3 cacheSet = new CacheSet2_3(0, 1);
-//                L3[0] = cacheSet;
 
-//                String binTag1 = "";
-//                for (int tag : L1[0].cacheLines.keySet()){
-//                    binTag1 = Integer.toBinaryString(tag);
-//                    String l1_1 = binTag1 + "0";
-//                    String l1_2 = binTag1 + "1";
-//                    System.out.println("first " + memArr[Integer.parseInt(l1_1,2)]);
-//                    System.out.println("second " + memArr[Integer.parseInt(l1_2,2)]);
-//                }
-
+//                System.out.println("L1's hit ratio : " + String.valueOf(((double)L1HitCount/(double)count) * 100) + "%");
+//                System.out.println("L2's hit ratio : " + String.valueOf(((double)L2HitCount/(double)count) * 100) + "%");
+//                System.out.println("L3's hit ratio : " + String.valueOf((((double)L3HitCount/(double)count)) * 100) + "%");
+//                System.out.println("-----------------------------------------");
                 viewCache(memArr);
-
             }
 
-            count++;
         }
-
-
-
+//        viewCache(memArr);
     }
 
-    static boolean testCache1 (int tag) {
-        if (L1[0].cacheLines.keySet().contains(tag)) {
+    static boolean testCache1 (int tag, CacheSet1 cacheSet1) {
+        if (cacheSet1.cacheLines.keySet().contains(tag)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    static boolean testCache2_3 (int tag, CacheSet2_3 cacheSet2_3) {
+        if (cacheSet2_3.cacheLines.keySet().contains(tag)) {
             return true;
         }
         else {
